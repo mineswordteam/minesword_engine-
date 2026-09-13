@@ -2,6 +2,7 @@
 
 import re
 import unicodedata
+from typing import List, Set
 
 # Mapping table for Arabic/Persian char normalization
 PERSIAN_ARABIC_MAP = {
@@ -36,6 +37,25 @@ PERSIAN_ARABIC_MAP = {
     '۹': '9',
 }
 
+# Common Persian typos and synonyms dictionary for query expansion
+SYNONYM_MAP = {
+    "لب تاپ": ["لپ تاپ", "لپتاپ", "لبتاپ", "laptop"],
+    "لپ تاپ": ["لب تاپ", "لپتاپ", "لبتاپ", "laptop"],
+    "لپتاپ": ["لپ تاپ", "لب تاپ", "laptop"],
+    "گوشی": ["موبایل", "تلفن همراه", "mobile", "phone"],
+    "موبایل": ["گوشی", "تلفن همراه", "mobile"],
+    "کامپیوتر": ["رایانه", "پی سی", "pc", "computer"],
+    "رایانه": ["کامپیوتر", "pc"],
+    "سرچ": ["جستجو", "جست‌وجو", "search"],
+    "جستجو": ["سرچ", "جست‌وجو"],
+    "بازی": ["گیم", "game"],
+    "گیم": ["بازی", "game"],
+    "دانلود": ["دریافت", "download"],
+    "ماشین": ["خودرو", "اتومبیل", "car"],
+    "خودرو": ["ماشین", "اتومبیل"],
+    "اینترنت": ["شبکه", "نت", "internet"],
+}
+
 # Arabic diacritics regex (\u064b to \u0652 plus Maddah \u0653, Hamza below \u0654, etc.)
 DIACRITICS_RE = re.compile(r'[\u064b-\u065f\u0670]')
 
@@ -55,7 +75,7 @@ def normalize_text(text: str) -> str:
     if not text:
         return ""
 
-    # Normalize unicode (NFD / NFC)
+    # Normalize unicode (NFC)
     text = unicodedata.normalize('NFC', text)
 
     # Character replacements
@@ -79,10 +99,26 @@ def normalize_text(text: str) -> str:
     return text
 
 
-def tokenize(text: str) -> list[str]:
+def tokenize(text: str) -> List[str]:
     """Tokenize normalized text into clean words."""
     norm = normalize_text(text)
     # Remove punctuation
     cleaned = PUNCTUATION_RE.sub(' ', norm)
     tokens = [t.strip() for t in cleaned.split() if t.strip()]
     return tokens
+
+
+def expand_query_synonyms(query: str) -> Set[str]:
+    """Expand query with common Persian synonyms and typos."""
+    norm_q = normalize_text(query)
+    expansions = {norm_q}
+
+    for phrase, synonyms in SYNONYM_MAP.items():
+        norm_phrase = normalize_text(phrase)
+        if norm_phrase in norm_q:
+            for syn in synonyms:
+                norm_syn = normalize_text(syn)
+                expanded = norm_q.replace(norm_phrase, norm_syn)
+                expansions.add(expanded)
+
+    return expansions

@@ -53,6 +53,13 @@ class Database:
             conn.executescript(INIT_SQL)
             conn.commit()
 
+        # Seed starter data if database is empty
+        try:
+            from minesword.seed_data import seed_database_if_empty
+            seed_database_if_empty(self)
+        except Exception:
+            pass
+
     def add_or_update_page(self, url: str, domain: str, title: str, description: str, raw_body: str) -> bool:
         """Add or update a web page in the database. Returns True if inserted/updated."""
         if not url or not raw_body:

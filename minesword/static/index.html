@@ -151,7 +151,7 @@
         .hero-subtitle {
             color: var(--text-secondary);
             font-size: 1.1rem;
-            margin-bottom: 2.5rem;
+            margin-bottom: 2rem;
         }
 
         .search-box-wrapper {
@@ -233,6 +233,31 @@
 
         .suggestion-item:hover {
             background-color: var(--surface-hover);
+            color: var(--accent-color);
+        }
+
+        /* Popular Query Chips */
+        .popular-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .chip {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            border-color: var(--accent-color);
             color: var(--accent-color);
         }
 
@@ -404,6 +429,15 @@
                 <div id="suggestionsBox" class="suggestions-dropdown"></div>
             </div>
 
+            <div class="popular-chips">
+                <span style="color: var(--text-secondary); font-size: 0.85rem; margin-left: 0.5rem; align-self: center;">پیشنهادها:</span>
+                <div class="chip" onclick="quickSearch('لب تاپ')">💻 لب تاپ</div>
+                <div class="chip" onclick="quickSearch('بازی جنگ های صلیبی')">⚔️ بازی جنگ های صلیبی</div>
+                <div class="chip" onclick="quickSearch('اینترنت ملی')">⚡ اینترنت ملی</div>
+                <div class="chip" onclick="quickSearch('برنامه‌نویسی پایتون')">🐍 برنامه‌نویسی پایتون</div>
+                <div class="chip" onclick="quickSearch('دانلود بازی')">🎮 دانلود بازی</div>
+            </div>
+
             <div class="badge-intranet">⚡ فعال در شبکه ملی اینترنت ایران (ملی)</div>
         </div>
 
@@ -469,6 +503,11 @@
             document.getElementById('homeSection').style.display = 'flex';
             document.getElementById('resultsSection').style.display = 'none';
             document.getElementById('mainSearchInput').value = '';
+        }
+
+        function quickSearch(query) {
+            document.getElementById('mainSearchInput').value = query;
+            performSearch(query, 1);
         }
 
         // Search trigger
@@ -544,7 +583,7 @@
                 const data = await res.json();
                 renderResults(data);
             } catch (err) {
-                document.getElementById('resultsList').innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">خطا در دریافت نتایج جستجو!</div>';
+                document.getElementById('resultsList').innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">خطا در دریافت نتایج جستجو! لطفاً مجدداً تلاش کنید.</div>';
             }
         }
 
@@ -554,8 +593,9 @@
             if (!data.results || data.results.length === 0) {
                 document.getElementById('resultsList').innerHTML = `
                     <div class="result-card" style="text-align: center; padding: 3rem;">
-                        <h3>نتیجه‌ای یافت نشد!</h3>
-                        <p style="color: var(--text-secondary); margin-top: 0.5rem;">لطفا کلمات کلیدی دیگری را امتحان کنید یا وبسایت جدیدی اضافه نمایید.</p>
+                        <h3>نتیجه‌ای برای "${data.query}" یافت نشد!</h3>
+                        <p style="color: var(--text-secondary); margin-top: 0.5rem; margin-bottom: 1rem;">می‌توانید وبسایت جدیدی جهت خزش و اندکس به موتور اضافه کنید.</p>
+                        <button class="btn btn-primary" onclick="openIndexModal()">➕ افزودن وبسایت به موتور</button>
                     </div>
                 `;
                 document.getElementById('pagination').innerHTML = '';
@@ -600,7 +640,7 @@
 
             const btn = document.getElementById('startCrawlBtn');
             btn.disabled = true;
-            btn.innerText = 'در حال خزش...';
+            btn.innerText = 'در حال ثبت...';
 
             try {
                 const res = await fetch('/api/index', {
@@ -609,9 +649,9 @@
                     body: JSON.stringify({ url: url, depth: depth, max_pages: 30 })
                 });
                 const data = await res.json();
-                alert(data.message || 'خزش انجام شد.');
+                alert(data.message || 'خزش در پس‌زمینه آغاز شد.');
                 closeIndexModal();
-                fetchStatus();
+                setTimeout(fetchStatus, 2000);
             } catch(e) {
                 alert('خطا در انجام خزش!');
             } finally {

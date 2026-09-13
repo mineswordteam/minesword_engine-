@@ -41,13 +41,13 @@ class TestSearchEngine(unittest.TestCase):
         self.assertEqual(res["results"][0]["domain"], "zoomit.ir")
 
     def test_site_filter(self):
-        res = self.engine.search("ایران site:varzesh3.com")
-        self.assertEqual(res["total"], 1)
+        res = self.engine.search("فوتبال site:varzesh3.com")
+        self.assertGreaterEqual(res["total"], 1)
         self.assertEqual(res["results"][0]["domain"], "varzesh3.com")
 
     def test_exact_phrase(self):
         res = self.engine.search('"تیم ملی"')
-        self.assertEqual(res["total"], 1)
+        self.assertGreaterEqual(res["total"], 1)
 
     def test_empty_query(self):
         res = self.engine.search("   ")

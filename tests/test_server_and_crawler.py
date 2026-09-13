@@ -39,7 +39,7 @@ class TestServerAndCrawler(unittest.TestCase):
         resp = self.app(env, start_response)
         data = json.loads(resp[0].decode("utf-8"))
         self.assertEqual(data["status"], "ok")
-        self.assertEqual(data["total_pages"], 0)
+        self.assertGreater(data["total_pages"], 0)
 
 
 if __name__ == "__main__":

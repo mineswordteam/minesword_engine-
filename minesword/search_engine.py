@@ -3,7 +3,7 @@
 import re
 from typing import List, Dict, Any, Tuple, Optional
 from minesword.db import Database
-from minesword.normalizer import normalize_text, tokenize
+from minesword.normalizer import normalize_text, tokenize, expand_query_synonyms
 
 
 class SearchEngine:
@@ -119,7 +119,7 @@ class SearchEngine:
         page: int = 1,
         page_size: int = 10
     ) -> Dict[str, Any]:
-        """Execute full search pipeline: parse, FTS query, filter, rank, and paginate."""
+        """Execute full search pipeline: parse, expand synonyms, FTS query, filter, rank, and paginate."""
         query_clean = query.strip()
         if not query_clean:
             return {
@@ -132,21 +132,42 @@ class SearchEngine:
 
         fts_query, exact_phrases, site_filter = self.parse_query(query_clean)
 
-        if not fts_query:
-            # Fallback for single characters or empty parsed query
-            norm_q = normalize_text(query_clean)
-            fts_query = f'"{norm_q}"*' if norm_q else ""
+        # Expand synonyms if exact search wasn't explicitly requested
+        expanded_queries = expand_query_synonyms(query_clean) if not exact_phrases else {query_clean}
 
-        if not fts_query:
+        raw_results_dict: Dict[int, Dict[str, Any]] = {}
+
+        for eq in expanded_queries:
+            eq_fts, eq_phrases, _ = self.parse_query(eq)
+            if not eq_fts:
+                norm_q = normalize_text(eq)
+                eq_fts = f'"{norm_q}"*' if norm_q else ""
+
+            if eq_fts:
+                res = self.db.search_fts(eq_fts, limit=150, offset=0)
+                for r in res:
+                    raw_results_dict[r["id"]] = r
+
+        raw_results = list(raw_results_dict.values())
+
+        if not raw_results and fts_query:
+            # Flexible term OR fallback if rigid AND search returned 0
+            tokens = tokenize(normalize_text(query_clean))
+            if len(tokens) > 1:
+                or_fts = " OR ".join([f'"{t}"*' for t in tokens if t])
+                raw_results = self.db.search_fts(or_fts, limit=100, offset=0)
+
+        if not raw_results:
             return {
-                "query": query,
+                "query": query_clean,
                 "total": 0,
                 "page": page,
                 "page_size": page_size,
+                "total_pages": 0,
                 "results": []
             }
 
-        raw_results = self.db.search_fts(fts_query, limit=200, offset=0)
+        raw_results = list(raw_results)
 
         # Apply site filter if requested
         if site_filter:
