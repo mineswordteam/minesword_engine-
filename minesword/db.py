@@ -44,7 +44,12 @@ class Database:
         self._init_db()
 
     def get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path, timeout=10.0)
+        # Fallback to /tmp if current directory is read-only (e.g. Vercel)
+        target_path = self.db_path
+        if not target_path.startswith("/tmp/") and (os.getenv("VERCEL") or not os.access(".", os.W_OK)):
+            target_path = os.path.join("/tmp", os.path.basename(self.db_path))
+
+        conn = sqlite3.connect(target_path, timeout=10.0)
         conn.row_factory = sqlite3.Row
         return conn
 
@@ -146,7 +151,7 @@ class Database:
             try:
                 cursor.execute(sql, (fts_query, limit, offset))
                 return [dict(r) for r in cursor.fetchall()]
-            except sqlite3.OperationalError:
+            except sqlite3.OperationalError as e:
                 return []
 
     def get_suggestions(self, prefix: str, limit: int = 8) -> List[str]:
