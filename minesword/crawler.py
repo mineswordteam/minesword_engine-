@@ -23,7 +23,7 @@ class HTMLTextExtractor(HTMLParser):
     def __init__(self):
         super().__init__()
         self.in_title = False
-        self.in_script_or_style = False
+        self.ignored_tags_count = 0
         self.title_parts: List[str] = []
         self.meta_description: str = ""
         self.body_parts: List[str] = []
@@ -37,7 +37,7 @@ class HTMLTextExtractor(HTMLParser):
         if tag == "title":
             self.in_title = True
         elif tag in ["script", "style", "noscript", "svg", "header", "footer", "nav"]:
-            self.in_script_or_style = True
+            self.ignored_tags_count += 1
         elif tag == "meta":
             name = attr_dict.get("name", "").lower()
             property_attr = attr_dict.get("property", "").lower()
@@ -60,12 +60,13 @@ class HTMLTextExtractor(HTMLParser):
         if tag == "title":
             self.in_title = False
         elif tag in ["script", "style", "noscript", "svg", "header", "footer", "nav"]:
-            self.in_script_or_style = False
+            if self.ignored_tags_count > 0:
+                self.ignored_tags_count -= 1
 
     def handle_data(self, data: str):
         if self.in_title:
             self.title_parts.append(data)
-        elif not self.in_script_or_style:
+        elif self.ignored_tags_count == 0:
             text = data.strip()
             if text:
                 self.body_parts.append(text)

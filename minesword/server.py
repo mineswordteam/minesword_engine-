@@ -3,6 +3,7 @@
 import json
 import os
 import urllib.parse
+import threading
 from wsgiref.simple_server import make_server
 from typing import Dict, Any, Callable
 from minesword.db import Database
@@ -111,8 +112,15 @@ class MineswordServer:
         if not url:
             return self.json_response({"error": "URL parameter required"}, start_response, status="400 Bad Request")
 
-        count = self.crawler.crawl_seed(seed_url=url, max_pages=max_pages, max_depth=depth)
-        return self.json_response({"message": f"خزش انجام شد. {count} صفحه جدید اندکس گردید.", "indexed": count}, start_response)
+        # Spawn background thread for crawling to prevent blocking HTTP server
+        thread = threading.Thread(
+            target=self.crawler.crawl_seed,
+            kwargs={"seed_url": url, "max_pages": max_pages, "max_depth": depth},
+            daemon=True
+        )
+        thread.start()
+
+        return self.json_response({"message": f"خزش وبسایت در پس‌زمینه آغاز گردید.", "url": url}, start_response)
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8080, db_path: str = "minesword.db"):
