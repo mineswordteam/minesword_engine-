@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesword Engine | موتور جستجوی پیشرفته ماین‌سورد</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --surface-hover: #334155;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-hover: #0284c7;
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+            --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'IRANSans', Tahoma, sans-serif;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f8fafc;
+            --surface-color: #ffffff;
+            --surface-hover: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-color: #0284c7;
+            --accent-hover: #0369a1;
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--surface-color);
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 10px rgba(56, 189, 248, 0.3);
+        }
+
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #38bdf8, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--surface-color);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background-color: var(--surface-hover);
+            border-color: var(--accent-color);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 2rem 1rem;
+            flex: 1;
+        }
+
+        /* Hero Home View */
+        .hero-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 1rem;
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: 2.75rem;
+            font-weight: 900;
+            margin-bottom: 0.75rem;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .search-box-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 650px;
+        }
+
+        .search-input-group {
+            display: flex;
+            align-items: center;
+            background-color: var(--surface-color);
+            border: 2px solid var(--border-color);
+            border-radius: 50px;
+            padding: 0.4rem 0.5rem 0.4rem 1.25rem;
+            box-shadow: var(--card-shadow);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-input-group:focus-within {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+        }
+
+        .search-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            font-family: inherit;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .search-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--accent-color);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .search-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* Category Tabs (Google Style) */
+        .category-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-item {
+            padding: 0.5rem 1rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-item:hover, .tab-item.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+        }
+
+        /* Suggestions Dropdown */
+        .suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 0.5rem;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            z-index: 100;
+            overflow: hidden;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 0.75rem 1.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-primary);
+            transition: background-color 0.15s;
+        }
+
+        .suggestion-item:hover {
+            background-color: var(--surface-hover);
+            color: var(--accent-color);
+        }
+
+        /* Popular Query Chips */
+        .popular-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .chip {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        /* Results View */
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            padding-bottom: 0.5rem;
+        }
+
+        .result-card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .result-card:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        .result-domain-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .domain-favicon {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            background-color: var(--accent-color);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .result-domain {
+            font-size: 0.85rem;
+            color: var(--accent-color);
+            direction: ltr;
+        }
+
+        .result-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-title a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .result-title a:hover {
+            text-decoration: underline;
+        }
+
+        .result-snippet {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        /* Indexing Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            padding: 1.75rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: inherit;
+            margin-bottom: 1rem;
+            direction: ltr;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--surface-color);
+        }
+
+        .badge-intranet {
+            display: inline-block;
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" class="logo-group" onclick="showHome(event)">
+            <div class="logo-icon">M</div>
+            <div class="logo-text">Minesword Engine</div>
+        </a>
+        <div class="header-actions">
+            <button class="btn" onclick="openIndexModal()">➕ افزودن / خزش سایت</button>
+            <button class="btn" onclick="toggleTheme()" id="themeBtn">🌙 تاریک</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Home Section -->
+        <div id="homeSection" class="hero-section">
+            <h1 class="hero-title">Minesword Engine</h1>
+            <p class="hero-subtitle">موتور جستجوی هوشمند، فوق‌العاده قوی و جامع | فعال در شبکه ملی اطلاعات ایران</p>
+
+            <div class="search-box-wrapper">
+                <div class="search-input-group">
+                    <input type="text" id="mainSearchInput" class="search-input" placeholder="عبارت مورد نظر، بازی، نرم‌افزار، لپ‌تاپ یا سایت را جستجو کنید..." autocomplete="off">
+                    <button class="search-btn" onclick="triggerSearch()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </button>
+                </div>
+                <div id="suggestionsBox" class="suggestions-dropdown"></div>
+            </div>
+
+            <div class="popular-chips">
+                <span style="color: var(--text-secondary); font-size: 0.85rem; margin-left: 0.5rem; align-self: center;">پیشنهادها:</span>
+                <div class="chip" onclick="quickSearch('دانلود بازی کالاف دیوتی از یاس دانلود')">🎮 کالاف دیوتی یاس دانلود</div>
+                <div class="chip" onclick="quickSearch('دانلود کالاف دیوتی موبایل فارسروید')">📱 کالاف دیوتی فارسروید</div>
+                <div class="chip" onclick="quickSearch('بازی جنگ های صلیبی')">⚔️ بازی جنگ های صلیبی</div>
+                <div class="chip" onclick="quickSearch('راهنمای خرید لپ تاپ زومیت')">💻 راهنمای خرید لپ تاپ</div>
+                <div class="chip" onclick="quickSearch('شبکه ملی اطلاعات')">⚡ شبکه ملی اطلاعات</div>
+            </div>
+
+            <div class="badge-intranet">⚡ فعال و پاسخگو در اینترنت ملی ایران</div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" style="display: none;">
+            <div class="search-box-wrapper" style="margin-bottom: 1.5rem;">
+                <div class="search-input-group">
+                    <input type="text" id="topSearchInput" class="search-input" placeholder="جستجوی جدید..." autocomplete="off">
+                    <button class="search-btn" onclick="triggerTopSearch()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Category Tabs -->
+            <div class="category-tabs">
+                <div class="tab-item active" onclick="switchCategory('all', this)">🌐 همه</div>
+                <div class="tab-item" onclick="switchCategory('بازی', this)">🎮 بازی و برنامه</div>
+                <div class="tab-item" onclick="switchCategory('لپ', this)">💻 فناوری و لپ‌تاپ</div>
+                <div class="tab-item" onclick="switchCategory('اخبار', this)">📰 اخبار و ورزش</div>
+            </div>
+
+            <div class="results-header">
+                <div id="resultsStats">نتایج جستجو</div>
+                <div id="statusStats">صفحات ایندکس شده: 223</div>
+            </div>
+
+            <div id="resultsList"></div>
+            <div id="pagination" class="pagination"></div>
+        </div>
+    </div>
+
+    <!-- Modal for crawling / indexing -->
+    <div id="indexModal" class="modal-overlay">
+        <div class="modal">
+            <h3 class="modal-title">افزودن و اندکس‌سازی آدرس وب</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">آدرس وبسایت مورد نظر را جهت خزش و افزودن کامل به موتور جستجو وارد کنید:</p>
+            <input type="url" id="indexUrlInput" class="modal-input" placeholder="https://farsroid.com" required>
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                <label style="font-size: 0.85rem; color: var(--text-secondary)">عمق خزش:</label>
+                <select id="crawlDepth" style="padding: 0.4rem; border-radius: 6px; background: var(--bg-color); color: var(--text-primary); border: 1px solid var(--border-color);">
+                    <option value="1">عمق ۱ (فقط همین صفحه)</option>
+                    <option value="2" selected>عمق ۲ (صفحات مرتبط)</option>
+                    <option value="3">عمق ۳ (خزش عمیق)</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeIndexModal()">انصراف</button>
+                <button class="btn btn-primary" id="startCrawlBtn" onclick="startIndexing()">شروع اندکس‌سازی</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Minesword Engine &copy; ۲۰۲۶ | موتور جستجوی هوشمند بومی با رتبه‌بندی دقیق گوگل و خزش وب‌سایت‌های ایرانی</p>
+    </footer>
+
+    <script>
+        let currentQuery = '';
+        let currentPage = 1;
+        let currentCategory = 'all';
+
+        function toggleTheme() {
+            const isLight = document.body.getAttribute('data-theme') === 'light';
+            document.body.setAttribute('data-theme', isLight ? 'dark' : 'light');
+            document.getElementById('themeBtn').innerText = isLight ? '🌙 تاریک' : '☀️ روشن';
+        }
+
+        function showHome(e) {
+            if(e) e.preventDefault();
+            document.getElementById('homeSection').style.display = 'flex';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('mainSearchInput').value = '';
+        }
+
+        function quickSearch(query) {
+            document.getElementById('mainSearchInput').value = query;
+            performSearch(query, 1);
+        }
+
+        function triggerSearch() {
+            const q = document.getElementById('mainSearchInput').value.trim();
+            if (q) performSearch(q, 1);
+        }
+
+        function triggerTopSearch() {
+            const q = document.getElementById('topSearchInput').value.trim();
+            if (q) performSearch(q, 1);
+        }
+
+        document.getElementById('mainSearchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') triggerSearch();
+        });
+        document.getElementById('topSearchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') triggerTopSearch();
+        });
+
+        function switchCategory(cat, el) {
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            if(el) el.classList.add('active');
+            currentCategory = cat;
+            if(currentQuery) performSearch(currentQuery, 1);
+        }
+
+        function setupAutocomplete(inputId) {
+            const input = document.getElementById(inputId);
+            const box = document.getElementById('suggestionsBox');
+
+            input.addEventListener('input', async () => {
+                const val = input.value.trim();
+                if (val.length < 2) {
+                    box.style.display = 'none';
+                    return;
+                }
+                try {
+                    const res = await fetch(`/api/suggest?q=${encodeURIComponent(val)}`);
+                    const data = await res.json();
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        box.innerHTML = data.suggestions.map(s => `
+                            <div class="suggestion-item" onclick="selectSuggestion('${s}')">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                <span>${s}</span>
+                            </div>
+                        `).join('');
+                        box.style.display = 'block';
+                    } else {
+                        box.style.display = 'none';
+                    }
+                } catch(err) {
+                    box.style.display = 'none';
+                }
+            });
+        }
+
+        setupAutocomplete('mainSearchInput');
+
+        function selectSuggestion(term) {
+            document.getElementById('mainSearchInput').value = term;
+            document.getElementById('suggestionsBox').style.display = 'none';
+            performSearch(term, 1);
+        }
+
+        async function performSearch(query, page = 1) {
+            currentQuery = query;
+            currentPage = page;
+            const startTime = performance.now();
+            document.getElementById('homeSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('topSearchInput').value = query;
+            document.getElementById('suggestionsBox').style.display = 'none';
+
+            document.getElementById('resultsList').innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-secondary);">در حال دریافت و رتبه‌بندی هوشمند نتایج...</div>';
+
+            try {
+                let url = `/api/search?q=${encodeURIComponent(query)}&page=${page}`;
+                if(currentCategory && currentCategory !== 'all') {
+                    url += `&category=${encodeURIComponent(currentCategory)}`;
+                }
+                const res = await fetch(url);
+                const data = await res.json();
+                const endTime = performance.now();
+                const elapsedSeconds = ((endTime - startTime) / 1000).toFixed(2);
+                renderResults(data, elapsedSeconds);
+            } catch (err) {
+                document.getElementById('resultsList').innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">خطا در دریافت نتایج جستجو! لطفاً مجدداً تلاش کنید.</div>';
+            }
+        }
+
+        function renderResults(data, seconds) {
+            document.getElementById('resultsStats').innerText = `حدود ${data.total} نتیجه (${seconds} ثانیه) - صفحه ${data.page} از ${data.total_pages}`;
+
+            if (!data.results || data.results.length === 0) {
+                document.getElementById('resultsList').innerHTML = `
+                    <div class="result-card" style="text-align: center; padding: 3rem;">
+                        <h3>نتیجه‌ای برای "${data.query}" یافت نشد!</h3>
+                        <p style="color: var(--text-secondary); margin-top: 0.5rem; margin-bottom: 1rem;">می‌توانید وبسایت جدیدی جهت خزش و اندکس به موتور اضافه کنید.</p>
+                        <button class="btn btn-primary" onclick="openIndexModal()">➕ افزودن وبسایت به موتور</button>
+                    </div>
+                `;
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+
+            const html = data.results.map(item => {
+                const initial = (item.domain || 'W').charAt(0).toUpperCase();
+                return `
+                <div class="result-card">
+                    <div class="result-domain-bar">
+                        <div class="domain-favicon">${initial}</div>
+                        <span class="result-domain">${item.domain}</span>
+                    </div>
+                    <h3 class="result-title"><a href="${item.url}" target="_blank" rel="noopener">${item.title}</a></h3>
+                    <div class="result-snippet">${item.snippet}</div>
+                </div>
+            `;
+            }).join('');
+
+            document.getElementById('resultsList').innerHTML = html;
+
+            // Pagination
+            let pageHtml = '';
+            for (let i = 1; i <= data.total_pages; i++) {
+                if (i === data.page) {
+                    pageHtml += `<button class="btn btn-primary" disabled>${i}</button>`;
+                } else {
+                    pageHtml += `<button class="btn" onclick="performSearch('${data.query}', ${i})">${i}</button>`;
+                }
+            }
+            document.getElementById('pagination').innerHTML = pageHtml;
+        }
+
+        function openIndexModal() {
+            document.getElementById('indexModal').style.display = 'flex';
+        }
+
+        function closeIndexModal() {
+            document.getElementById('indexModal').style.display = 'none';
+        }
+
+        async function startIndexing() {
+            const url = document.getElementById('indexUrlInput').value.trim();
+            const depth = parseInt(document.getElementById('crawlDepth').value) || 2;
+            if (!url) return alert('لطفا آدرس معتبر وارد کنید');
+
+            const btn = document.getElementById('startCrawlBtn');
+            btn.disabled = true;
+            btn.innerText = 'در حال ثبت...';
+
+            try {
+                const res = await fetch('/api/index', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url, depth: depth, max_pages: 30 })
+                });
+                const data = await res.json();
+                alert(data.message || 'خزش در پس‌زمینه آغاز شد.');
+                closeIndexModal();
+                setTimeout(fetchStatus, 2000);
+            } catch(e) {
+                alert('خطا در انجام خزش!');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'شروع اندکس‌سازی';
+            }
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                document.getElementById('statusStats').innerText = `صفحات ایندکس شده: ${data.total_pages}`;
+            } catch(e) {}
+        }
+        fetchStatus();
+    </script>
+</body>
+</html>
