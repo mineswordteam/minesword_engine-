@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minesword Engine | موتور جستجوی پیشرفته ماین‌سورد</title>
+    <title>Minesword Engine | موتور جستجوی هوشمند پیشرفته</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -122,14 +122,13 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 950px;
             margin: 0 auto;
             width: 100%;
             padding: 2rem 1rem;
             flex: 1;
         }
 
-        /* Hero Home View */
         .hero-section {
             display: flex;
             flex-direction: column;
@@ -157,7 +156,7 @@
         .search-box-wrapper {
             position: relative;
             width: 100%;
-            max-width: 650px;
+            max-width: 680px;
         }
 
         .search-input-group {
@@ -205,22 +204,24 @@
             background-color: var(--accent-hover);
         }
 
-        /* Category Tabs (Google Style) */
+        /* 8 Category Tabs */
         .category-tabs {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             margin-bottom: 1.5rem;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 0.5rem;
+            overflow-x: auto;
         }
 
         .tab-item {
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.85rem;
             color: var(--text-secondary);
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             border-bottom: 2px solid transparent;
+            white-space: nowrap;
             transition: all 0.2s;
         }
 
@@ -229,7 +230,6 @@
             border-bottom-color: var(--accent-color);
         }
 
-        /* Suggestions Dropdown */
         .suggestions-dropdown {
             position: absolute;
             top: 100%;
@@ -260,7 +260,6 @@
             color: var(--accent-color);
         }
 
-        /* Popular Query Chips */
         .popular-chips {
             display: flex;
             flex-wrap: wrap;
@@ -285,7 +284,6 @@
             color: var(--accent-color);
         }
 
-        /* Results View */
         .results-header {
             display: flex;
             justify-content: space-between;
@@ -364,7 +362,6 @@
             margin-top: 2rem;
         }
 
-        /* Indexing Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -450,11 +447,11 @@
         <!-- Home Section -->
         <div id="homeSection" class="hero-section">
             <h1 class="hero-title">Minesword Engine</h1>
-            <p class="hero-subtitle">موتور جستجوی هوشمند، فوق‌العاده قوی و جامع | فعال در شبکه ملی اطلاعات ایران</p>
+            <p class="hero-subtitle">موتور جستجوی مستقل و هوشمند | سازگار کامل با شبکه ملی اطلاعات ایران (NIN)</p>
 
             <div class="search-box-wrapper">
                 <div class="search-input-group">
-                    <input type="text" id="mainSearchInput" class="search-input" placeholder="عبارت مورد نظر، بازی، نرم‌افزار، لپ‌تاپ یا سایت را جستجو کنید..." autocomplete="off">
+                    <input type="text" id="mainSearchInput" class="search-input" placeholder="جستجوی وب، بازی، نرم‌افزار، لپ‌تاپ، اخبار و..." autocomplete="off">
                     <button class="search-btn" onclick="triggerSearch()">
                         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </button>
@@ -464,14 +461,14 @@
 
             <div class="popular-chips">
                 <span style="color: var(--text-secondary); font-size: 0.85rem; margin-left: 0.5rem; align-self: center;">پیشنهادها:</span>
-                <div class="chip" onclick="quickSearch('دانلود بازی کالاف دیوتی از یاس دانلود')">🎮 کالاف دیوتی یاس دانلود</div>
-                <div class="chip" onclick="quickSearch('دانلود کالاف دیوتی موبایل فارسروید')">📱 کالاف دیوتی فارسروید</div>
-                <div class="chip" onclick="quickSearch('بازی جنگ های صلیبی')">⚔️ بازی جنگ های صلیبی</div>
-                <div class="chip" onclick="quickSearch('راهنمای خرید لپ تاپ زومیت')">💻 راهنمای خرید لپ تاپ</div>
-                <div class="chip" onclick="quickSearch('شبکه ملی اطلاعات')">⚡ شبکه ملی اطلاعات</div>
+                <div class="chip" onclick="quickSearch('دانلود کالاف دیوتی موبایل')">📱 کالاف دیوتی موبایل</div>
+                <div class="chip" onclick="quickSearch('دانلود کالاف دیوتی وارزون')">🎮 کالاف دیوتی وارزون</div>
+                <div class="chip" onclick="quickSearch('بهترین لپ تاپ برای برنامه نویسی')">💻 لپ تاپ برنامه نویسی</div>
+                <div class="chip" onclick="quickSearch('Stronghold Crusader دانلود')">⚔️ جنگ های صلیبی</div>
+                <div class="chip" onclick="quickSearch('آموزش پایتون')">🐍 آموزش پایتون</div>
             </div>
 
-            <div class="badge-intranet">⚡ فعال و پاسخگو در اینترنت ملی ایران</div>
+            <div class="badge-intranet">⚡ کاملاً مستقل و فعال در شبکه ملی اطلاعات ایران (NIN)</div>
         </div>
 
         <!-- Results Section -->
@@ -485,17 +482,21 @@
                 </div>
             </div>
 
-            <!-- Category Tabs -->
+            <!-- 8 Category Tabs -->
             <div class="category-tabs">
                 <div class="tab-item active" onclick="switchCategory('all', this)">🌐 همه</div>
                 <div class="tab-item" onclick="switchCategory('بازی', this)">🎮 بازی و برنامه</div>
-                <div class="tab-item" onclick="switchCategory('لپ', this)">💻 فناوری و لپ‌تاپ</div>
-                <div class="tab-item" onclick="switchCategory('اخبار', this)">📰 اخبار و ورزش</div>
+                <div class="tab-item" onclick="switchCategory('فناوری', this)">⚡ فناوری</div>
+                <div class="tab-item" onclick="switchCategory('لپ تاپ', this)">💻 لپ‌تاپ و سخت‌افزار</div>
+                <div class="tab-item" onclick="switchCategory('اخبار', this)">📰 اخبار</div>
+                <div class="tab-item" onclick="switchCategory('ورزش', this)">⚽ ورزش</div>
+                <div class="tab-item" onclick="switchCategory('پایتون', this)">💻 برنامه‌نویسی</div>
+                <div class="tab-item" onclick="switchCategory('خودرو', this)">🚗 خودرو</div>
             </div>
 
             <div class="results-header">
                 <div id="resultsStats">نتایج جستجو</div>
-                <div id="statusStats">صفحات ایندکس شده: 223</div>
+                <div id="statusStats">صفحات ایندکس شده: 0</div>
             </div>
 
             <div id="resultsList"></div>
@@ -507,7 +508,7 @@
     <div id="indexModal" class="modal-overlay">
         <div class="modal">
             <h3 class="modal-title">افزودن و اندکس‌سازی آدرس وب</h3>
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">آدرس وبسایت مورد نظر را جهت خزش و افزودن کامل به موتور جستجو وارد کنید:</p>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">آدرس وبسایت مورد نظر را جهت خزش و افزودن به دیتابیس بومی وارد کنید:</p>
             <input type="url" id="indexUrlInput" class="modal-input" placeholder="https://farsroid.com" required>
             <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
                 <label style="font-size: 0.85rem; color: var(--text-secondary)">عمق خزش:</label>
@@ -525,7 +526,7 @@
     </div>
 
     <footer>
-        <p>Minesword Engine &copy; ۲۰۲۶ | موتور جستجوی هوشمند بومی با رتبه‌بندی دقیق گوگل و خزش وب‌سایت‌های ایرانی</p>
+        <p>Minesword Engine &copy; ۲۰۲۶ | موتور جستجوی مستقل و خودمیزبان بومی</p>
     </footer>
 
     <script>
@@ -622,7 +623,7 @@
             document.getElementById('topSearchInput').value = query;
             document.getElementById('suggestionsBox').style.display = 'none';
 
-            document.getElementById('resultsList').innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-secondary);">در حال دریافت و رتبه‌بندی هوشمند نتایج...</div>';
+            document.getElementById('resultsList').innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-secondary);">در حال تحلیل و دریافت نتایج...</div>';
 
             try {
                 let url = `/api/search?q=${encodeURIComponent(query)}&page=${page}`;
@@ -640,7 +641,8 @@
         }
 
         function renderResults(data, seconds) {
-            document.getElementById('resultsStats').innerText = `حدود ${data.total} نتیجه (${seconds} ثانیه) - صفحه ${data.page} از ${data.total_pages}`;
+            const intentStr = data.intent ? ` (قصد جستجو: ${data.intent})` : '';
+            document.getElementById('resultsStats').innerText = `حدود ${data.total} نتیجه (${seconds} ثانیه)${intentStr} - صفحه ${data.page} از ${data.total_pages}`;
 
             if (!data.results || data.results.length === 0) {
                 document.getElementById('resultsList').innerHTML = `
@@ -670,7 +672,6 @@
 
             document.getElementById('resultsList').innerHTML = html;
 
-            // Pagination
             let pageHtml = '';
             for (let i = 1; i <= data.total_pages; i++) {
                 if (i === data.page) {

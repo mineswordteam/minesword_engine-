@@ -1,10 +1,10 @@
-"""Text normalization module for Persian, Arabic, and English text processing."""
+"""Persian, Arabic, and English text normalization module for Minesword Engine."""
 
 import re
 import unicodedata
 from typing import List, Set
 
-# Mapping table for Arabic/Persian char normalization
+# Char mapping table
 PERSIAN_ARABIC_MAP = {
     'ك': 'ک',
     'ي': 'ی',
@@ -37,101 +37,83 @@ PERSIAN_ARABIC_MAP = {
     '۹': '9',
 }
 
-# Common Persian typos and synonyms dictionary for query expansion
-SYNONYM_MAP = {
-    "لب تاپ": ["لپ تاپ", "لپتاپ", "لبتاپ", "laptop"],
-    "لپ تاپ": ["لب تاپ", "لپتاپ", "لبتاپ", "laptop"],
-    "لپتاپ": ["لپ تاپ", "لب تاپ", "laptop"],
-    "گوشی": ["موبایل", "تلفن همراه", "mobile", "phone"],
-    "موبایل": ["گوشی", "تلفن همراه", "mobile"],
-    "کامپیوتر": ["رایانه", "پی سی", "pc", "computer"],
-    "رایانه": ["کامپیوتر", "pc"],
-    "سرچ": ["جستجو", "جست‌وجو", "search"],
-    "جستجو": ["سرچ", "جست‌وجو"],
-    "بازی": ["گیم", "game"],
-    "گیم": ["بازی", "game"],
-    "دانلود": ["دریافت", "download"],
-    "ماشین": ["خودرو", "اتومبیل", "car"],
-    "خودرو": ["ماشین", "اتومبیل"],
-    "اینترنت": ["شبکه", "نت", "internet"],
-    "کالاف": ["کال اف دیوتی", "کالاف دیوتی", "call of duty", "cod"],
-    "کالاف دیوتی": ["کال اف دیوتی", "کالاف", "call of duty", "cod"],
-    "کال اف دیوتی": ["کالاف", "کالاف دیوتی", "call of duty", "cod"],
-    "call of duty": ["کال اف دیوتی", "کالاف", "cod"],
-    "جنگ های صلیبی": ["جنگهای صلیبی", "stronghold crusader", "قلعه"],
-    "جنگهای صلیبی": ["جنگ های صلیبی", "stronghold crusader", "قلعه"],
-    "قلعه": ["جنگ های صلیبی", "stronghold crusader"],
-    "فارسروید": ["farsroid", "فارس روید"],
-    "farsroid": ["فارسروید", "فارس روید"],
-    "یاس دانلود": ["yasdl", "یاس دانلود"],
-    "yasdl": ["یاس دانلود", "یاس‌دانلود"],
-    "سافت ۹۸": ["soft98", "سافت 98"],
-    "soft98": ["سافت ۹۸", "سافت 98"],
-    "دیجی کالا": ["دیجیکالا", "digikala"],
-    "digikala": ["دیجی کالا", "دیجیکالا"],
-    "ترب": ["torob"],
-    "زومیت": ["zoomit"],
-    "زومجی": ["zoomg"]
+ENGLISH_TO_PERSIAN_DIGITS = {
+    '0': '۰', '1': '۱', '2': '۲', '3': '۳', '4': '۴',
+    '5': '۵', '6': '۶', '7': '۷', '8': '۸', '9': '۹'
 }
 
-# Arabic diacritics regex (\u064b to \u0652 plus Maddah \u0653, Hamza below \u0654, etc.)
+# Controlled high-precision synonym dictionary
+CONTROLLED_SYNONYMS = {
+    "لب تاپ": ["لپ تاپ", "laptop"],
+    "لپ تاپ": ["لب تاپ", "laptop"],
+    "لپتاپ": ["لپ تاپ", "laptop"],
+    "کالاف": ["کال اف دیوتی", "کالاف دیوتی", "call of duty"],
+    "کالاف دیوتی": ["کال اف دیوتی", "کالاف", "call of duty"],
+    "کال اف دیوتی": ["کالاف", "کالاف دیوتی", "call of duty"],
+    "call of duty": ["کال اف دیوتی", "کالاف"],
+    "جنگ های صلیبی": ["جنگهای صلیبی", "stronghold crusader"],
+    "جنگهای صلیبی": ["جنگ های صلیبی", "stronghold crusader"],
+    "stronghold crusader": ["جنگ های صلیبی"],
+    "ویندوز ۱۱": ["ویندوز 11", "windows 11"],
+    "ویندوز 11": ["ویندوز ۱۱", "windows 11"],
+    "windows 11": ["ویندوز 11", "ویندوز ۱۱"],
+    "پایتون": ["python"],
+    "python": ["پایتون"],
+    "گوشی": ["موبایل", "mobile"],
+    "موبایل": ["گوشی", "mobile"],
+    "خودرو": ["ماشین", "car"],
+    "ماشین": ["خودرو", "car"]
+}
+
 DIACRITICS_RE = re.compile(r'[\u064b-\u065f\u0670]')
-
-# Non-breaking spaces, ZWNJs, invisible chars
 INVISIBLE_CHARS_RE = re.compile(r'[\u200c\u200b\u200d\ufeff\u00a0]')
-
-# Punctuation and non-alphanumeric chars for tokenization
 PUNCTUATION_RE = re.compile(r'[^\w\s]', re.UNICODE)
 
 
-def normalize_text(text: str) -> str:
-    """Normalize text for Persian/Arabic/English indexing and search.
+def normalize_digits(text: str, to_english: bool = True) -> str:
+    """Convert digits between Persian/Arabic and English."""
+    if not text:
+        return ""
+    if to_english:
+        chars = [PERSIAN_ARABIC_MAP.get(ch, ch) for ch in text]
+    else:
+        chars = [ENGLISH_TO_PERSIAN_DIGITS.get(ch, ch) for ch in text]
+    return "".join(chars)
 
-    Unifies Kaf, Yeh, Teh Marbuta, Alef, digits, removes diacritics & ZWNJ,
-    lowercases English text, and removes extra spaces.
-    """
+
+def normalize_text(text: str) -> str:
+    """Normalize text for Persian/Arabic/English indexing and search."""
     if not text:
         return ""
 
-    # Normalize unicode (NFC)
     text = unicodedata.normalize('NFC', text)
-
-    # Character replacements
-    chars = []
-    for ch in text:
-        chars.append(PERSIAN_ARABIC_MAP.get(ch, ch))
+    chars = [PERSIAN_ARABIC_MAP.get(ch, ch) for ch in text]
     text = "".join(chars)
 
-    # Remove diacritics
     text = DIACRITICS_RE.sub('', text)
-
-    # Convert ZWNJ and invisible characters to spaces
     text = INVISIBLE_CHARS_RE.sub(' ', text)
-
-    # Lowercase ASCII / Latin
     text = text.lower()
-
-    # Collapse multiple whitespaces
     text = re.sub(r'\s+', ' ', text).strip()
-
     return text
 
 
 def tokenize(text: str) -> List[str]:
     """Tokenize normalized text into clean words."""
     norm = normalize_text(text)
-    # Remove punctuation
     cleaned = PUNCTUATION_RE.sub(' ', norm)
-    tokens = [t.strip() for t in cleaned.split() if t.strip()]
-    return tokens
+    return [t.strip() for t in cleaned.split() if t.strip()]
 
 
 def expand_query_synonyms(query: str) -> Set[str]:
-    """Expand query with common Persian synonyms and typos."""
+    """Controlled synonym and digit variant expansion for search query."""
     norm_q = normalize_text(query)
     expansions = {norm_q}
 
-    for phrase, synonyms in SYNONYM_MAP.items():
+    # Add digit variants
+    expansions.add(normalize_digits(norm_q, to_english=True))
+    expansions.add(normalize_digits(norm_q, to_english=False))
+
+    for phrase, synonyms in CONTROLLED_SYNONYMS.items():
         norm_phrase = normalize_text(phrase)
         if norm_phrase in norm_q:
             for syn in synonyms:

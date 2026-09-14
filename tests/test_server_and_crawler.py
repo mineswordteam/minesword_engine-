@@ -14,6 +14,13 @@ class TestServerAndCrawler(unittest.TestCase):
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
         self.app = MineswordServer(self.db_path)
+        self.app.db.add_or_update_page(
+            url="https://test.ir/home",
+            domain="test.ir",
+            title="صفحه اصلی تست",
+            description="تست سرور",
+            raw_body="موتور جستجو"
+        )
 
     def tearDown(self):
         if os.path.exists(self.db_path):

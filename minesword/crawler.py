@@ -1,218 +1,248 @@
-"""Web crawler and HTML parser module for Minesword search engine."""
+"""Robust web crawler with NIN priority, robots.txt, sitemap/RSS discovery for Minesword Engine."""
 
-import urllib.request
-import urllib.parse
-import urllib.error
 import re
-import socket
-import logging
+import time
+import urllib.parse
+import urllib.request
+import urllib.robotparser
 from html.parser import HTMLParser
-from typing import Set, List, Dict, Optional, Tuple
-from concurrent.futures import ThreadPoolExecutor
+from typing import List, Set, Dict, Any, Optional
 from minesword.db import Database
+from minesword.sitemap_rss import fetch_and_parse_sitemap, fetch_and_parse_rss
 
-logger = logging.getLogger(__name__)
 
-# Standard User-Agent mimicking standard browser for maximum compatibility
-DEFAULT_USER_AGENT = "MineswordBot/1.0 (+http://minesword.local/bot)"
+def normalize_url(url: str, base_url: str = "") -> str:
+    """Normalize and resolve relative or absolute URLs."""
+    if not url:
+        return ""
+    if base_url:
+        url = urllib.parse.urljoin(base_url, url)
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ['http', 'https']:
+        return ""
+    return urllib.parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', parsed.query, ''))
 
 
 class HTMLTextExtractor(HTMLParser):
-    """Custom HTML Parser to extract title, meta description, raw body text, and internal/external hyperlinks."""
+    """HTML parser extracting title, canonical URL, headings, description, and links."""
 
     def __init__(self):
         super().__init__()
-        self.in_title = False
-        self.ignored_tags_count = 0
         self.title_parts: List[str] = []
-        self.meta_description: str = ""
+        self.heading_parts: List[str] = []
         self.body_parts: List[str] = []
-        self.links: List[str] = []
-        self.canonical_url: Optional[str] = None
+        self.description: str = ""
+        self.canonical_url: str = ""
+        self.links: Set[str] = set()
 
-    def handle_starttag(self, tag: str, attrs: List[Tuple[str, Optional[str]]]):
-        tag = tag.lower()
-        attr_dict = {k.lower(): (v or "") for k, v in attrs}
+        self.in_title = False
+        self.in_heading = False
+        self.ignored_tags_count = 0
 
-        if tag == "title":
-            self.in_title = True
-        elif tag in ["script", "style", "noscript", "svg", "header", "footer", "nav"]:
+    def handle_starttag(self, tag: str, attrs: List[tuple]):
+        tag_lower = tag.lower()
+        if tag_lower in ['script', 'style', 'noscript', 'header', 'footer', 'nav']:
             self.ignored_tags_count += 1
-        elif tag == "meta":
-            name = attr_dict.get("name", "").lower()
-            property_attr = attr_dict.get("property", "").lower()
-            if name == "description" or property_attr == "og:description":
-                if not self.meta_description:
-                    self.meta_description = attr_dict.get("content", "").strip()
-        elif tag == "link":
-            rel = attr_dict.get("rel", "").lower()
-            if rel == "canonical":
-                self.canonical_url = attr_dict.get("href", "").strip()
-        elif tag == "a":
-            href = attr_dict.get("href")
+            return
+
+        if tag_lower == 'title':
+            self.in_title = True
+        elif tag_lower in ['h1', 'h2', 'h3']:
+            self.in_heading = True
+        elif tag_lower == 'link':
+            attr_dict = dict(attrs)
+            if attr_dict.get('rel') == 'canonical':
+                self.canonical_url = attr_dict.get('href', '')
+        elif tag_lower == 'meta':
+            attr_dict = dict(attrs)
+            if attr_dict.get('name', '').lower() == 'description':
+                self.description = attr_dict.get('content', '')
+        elif tag_lower == 'a':
+            attr_dict = dict(attrs)
+            href = attr_dict.get('href')
             if href:
-                # Filter out javascript, mailto, tel links
-                if not href.startswith(("javascript:", "mailto:", "tel:", "#")):
-                    self.links.append(href.strip())
+                self.links.add(href)
 
     def handle_endtag(self, tag: str):
-        tag = tag.lower()
-        if tag == "title":
-            self.in_title = False
-        elif tag in ["script", "style", "noscript", "svg", "header", "footer", "nav"]:
+        tag_lower = tag.lower()
+        if tag_lower in ['script', 'style', 'noscript', 'header', 'footer', 'nav']:
             if self.ignored_tags_count > 0:
                 self.ignored_tags_count -= 1
+            return
+
+        if tag_lower == 'title':
+            self.in_title = False
+        elif tag_lower in ['h1', 'h2', 'h3']:
+            self.in_heading = False
 
     def handle_data(self, data: str):
+        if self.ignored_tags_count > 0:
+            return
+        text = data.strip()
+        if not text:
+            return
+
         if self.in_title:
-            self.title_parts.append(data)
-        elif self.ignored_tags_count == 0:
-            text = data.strip()
-            if text:
-                self.body_parts.append(text)
+            self.title_parts.append(text)
+        elif self.in_heading:
+            self.heading_parts.append(text)
+        else:
+            self.body_parts.append(text)
 
     def get_title(self) -> str:
         return " ".join(self.title_parts).strip()
 
-    def get_body(self) -> str:
+    def get_headings(self) -> str:
+        return " ".join(self.heading_parts).strip()
+
+    def get_body_text(self) -> str:
         return " ".join(self.body_parts).strip()
 
-
-def normalize_url(url: str, base_url: str = "") -> str:
-    """Normalize and resolve relative URLs, stripping query fragments."""
-    if base_url:
-        url = urllib.parse.urljoin(base_url, url)
-
-    parsed = urllib.parse.urlparse(url)
-    # Reconstruct clean URL (scheme, netloc, path, params, query)
-    scheme = parsed.scheme.lower()
-    if scheme not in ("http", "https"):
-        return ""
-
-    netloc = parsed.netloc.lower()
-    path = parsed.path
-    if not path:
-        path = "/"
-
-    # Strip trailing fragment `#`
-    clean_url = urllib.parse.urlunparse((scheme, netloc, path, parsed.params, parsed.query, ""))
-    return clean_url
-
-
-def extract_domain(url: str) -> str:
-    parsed = urllib.parse.urlparse(url)
-    return parsed.netloc.lower()
+    def get_body(self) -> str:
+        return self.get_body_text()
 
 
 class WebCrawler:
-    """Multithreaded web crawler designed for high resilience on local networks and intranet."""
+    """NIN-first web crawler supporting robots.txt, canonical URLs, rate limits, and feed discovery."""
 
-    def __init__(self, db: Database, max_threads: int = 5, timeout: int = 10, user_agent: str = DEFAULT_USER_AGENT):
+    def __init__(
+        self,
+        db: Database,
+        iran_priority: bool = True,
+        allowed_domains: Optional[List[str]] = None,
+        blocked_domains: Optional[List[str]] = None
+    ):
         self.db = db
-        self.max_threads = max_threads
-        self.timeout = timeout
-        self.user_agent = user_agent
-        self.visited_urls: Set[str] = set()
+        self.iran_priority = iran_priority
+        self.allowed_domains = [d.lower() for d in (allowed_domains or [])]
+        self.blocked_domains = [d.lower() for d in (blocked_domains or [])]
+        self.robots_cache: Dict[str, urllib.robotparser.RobotFileParser] = {}
+        self.last_domain_crawl: Dict[str, float] = {}
 
-    def fetch_url(self, url: str) -> Optional[Tuple[str, str, str]]:
-        """Fetch URL content, return (html_content, content_type, final_url)."""
-        req = urllib.request.Request(
-            url,
-            headers={
-                "User-Agent": self.user_agent,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "fa,fa-IR,en-US,en;q=0.9",
-            }
-        )
+    def is_domain_allowed(self, domain: str) -> bool:
+        domain = domain.lower()
+        if any(b in domain for b in self.blocked_domains):
+            return False
+        if self.allowed_domains and not any(a in domain for a in self.allowed_domains):
+            return False
+        return True
+
+    def get_robots_parser(self, domain: str) -> urllib.robotparser.RobotFileParser:
+        if domain in self.robots_cache:
+            return self.robots_cache[domain]
+
+        parser = urllib.robotparser.RobotFileParser()
+        parser.set_url(f"https://{domain}/robots.txt")
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                content_type = resp.headers.get_content_type()
-                if "text/html" not in content_type and "application/xhtml+xml" not in content_type:
-                    return None
+            parser.read()
+        except Exception:
+            pass
+        self.robots_cache[domain] = parser
+        return parser
 
-                charset = resp.headers.get_content_charset() or "utf-8"
-                raw_bytes = resp.read()
-                try:
-                    html_content = raw_bytes.decode(charset, errors="replace")
-                except (LookupError, UnicodeDecodeError):
-                    html_content = raw_bytes.decode("utf-8", errors="replace")
+    def can_fetch(self, url: str) -> bool:
+        parsed = urllib.parse.urlparse(url)
+        domain = parsed.netloc.lower()
+        if not self.is_domain_allowed(domain):
+            return False
 
-                return html_content, content_type, resp.geturl()
-        except Exception as e:
-            logger.debug(f"Failed to fetch {url}: {e}")
+        parser = self.get_robots_parser(domain)
+        try:
+            return parser.can_fetch("MineswordCrawler", url)
+        except Exception:
+            return True
+
+    def crawl_url(self, url: str, timeout: int = 5) -> Optional[Dict[str, Any]]:
+        if not self.can_fetch(url):
             return None
 
-    def parse_html(self, html_content: str, base_url: str) -> Tuple[str, str, str, List[str]]:
-        """Parse HTML to extract title, description, body text, and resolved link URLs."""
-        parser = HTMLTextExtractor()
+        parsed = urllib.parse.urlparse(url)
+        domain = parsed.netloc.lower()
+
+        last_time = self.last_domain_crawl.get(domain, 0)
+        if time.time() - last_time < 0.3:
+            time.sleep(0.3)
+        self.last_domain_crawl[domain] = time.time()
+
         try:
-            parser.feed(html_content)
-        except Exception as e:
-            logger.debug(f"HTML parsing warning for {base_url}: {e}")
+            req = urllib.request.Request(url, headers={"User-Agent": "MineswordCrawler/2.0"})
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                if resp.status != 200:
+                    return None
 
-        title = parser.get_title() or base_url
-        description = parser.meta_description
-        body = parser.get_body()
+                content_type = resp.headers.get("Content-Type", "")
+                if "text/html" not in content_type.lower():
+                    return None
 
-        resolved_links = []
-        for link in parser.links:
-            norm = normalize_url(link, base_url)
-            if norm:
-                resolved_links.append(norm)
+                html_content = resp.read().decode('utf-8', errors='ignore')
 
-        return title, description, body, resolved_links
+            extractor = HTMLTextExtractor()
+            extractor.feed(html_content)
 
-    def crawl_seed(self, seed_url: str, max_pages: int = 50, max_depth: int = 2) -> int:
-        """Crawl starting from seed_url up to max_pages and max_depth."""
-        normalized_seed = normalize_url(seed_url)
-        if not normalized_seed:
-            return 0
+            title = extractor.get_title() or domain
+            headings = extractor.get_headings()
+            body_text = extractor.get_body_text()
+            description = extractor.description
+            canonical_url = extractor.canonical_url or url
 
-        queue: List[Tuple[str, int]] = [(normalized_seed, 0)]
-        indexed_count = 0
+            domain_auth = 1.3 if (self.iran_priority and (domain.endswith('.ir') or '.ir/' in domain)) else 1.0
 
-        with ThreadPoolExecutor(max_workers=self.max_threads) as executor:
-            while queue and indexed_count < max_pages:
-                current_batch = []
-                while queue and len(current_batch) < self.max_threads:
-                    url, depth = queue.pop(0)
-                    if url in self.visited_urls:
-                        continue
-                    self.visited_urls.add(url)
-                    current_batch.append((url, depth))
+            page_id = self.db.add_or_update_page(
+                url=url,
+                domain=domain,
+                title=title,
+                description=description,
+                raw_body=body_text,
+                canonical_url=canonical_url,
+                headings=headings,
+                domain_authority=domain_auth
+            )
 
-                if not current_batch:
-                    break
+            resolved_links = set()
+            for link in extractor.links:
+                abs_url = normalize_url(link, url)
+                if abs_url:
+                    resolved_links.add(abs_url)
 
-                futures = {executor.submit(self.fetch_url, url): (url, depth) for url, depth in current_batch}
+            return {
+                "id": page_id,
+                "url": url,
+                "domain": domain,
+                "title": title,
+                "description": description,
+                "body_text": body_text,
+                "links": resolved_links
+            }
+        except Exception:
+            return None
 
-                for future in futures:
-                    url, depth = futures[future]
-                    result = future.result()
-                    if not result:
-                        continue
+    def crawl_seed(self, seed_url: str, max_pages: int = 20, max_depth: int = 2):
+        visited: Set[str] = set()
+        queue: List[tuple] = [(seed_url, 1)]
 
-                    html_content, _, final_url = result
-                    title, description, body, links = self.parse_html(html_content, final_url)
+        try:
+            domain = urllib.parse.urlparse(seed_url).netloc
+            sitemap_urls = fetch_and_parse_sitemap(f"https://{domain}/sitemap.xml")
+            for u in sitemap_urls[:15]:
+                queue.append((u, 2))
 
-                    if len(body) < 10:  # Skip empty or negligible pages
-                        continue
+            rss_urls = fetch_and_parse_rss(f"https://{domain}/rss")
+            for u in rss_urls[:10]:
+                queue.append((u, 2))
+        except Exception:
+            pass
 
-                    domain = extract_domain(final_url)
-                    updated = self.db.add_or_update_page(
-                        url=final_url,
-                        domain=domain,
-                        title=title,
-                        description=description,
-                        raw_body=body
-                    )
-                    if updated:
-                        indexed_count += 1
+        count = 0
+        while queue and count < max_pages:
+            url, depth = queue.pop(0)
+            if url in visited or depth > max_depth:
+                continue
 
-                    # Queue discovered links if depth limit is not reached
-                    if depth < max_depth:
-                        for link_url in links:
-                            if link_url not in self.visited_urls:
-                                queue.append((link_url, depth + 1))
-
-        return indexed_count
+            visited.add(url)
+            res = self.crawl_url(url)
+            if res:
+                count += 1
+                if depth < max_depth:
+                    for link in res.get("links", []):
+                        if link not in visited:
+                            queue.append((link, depth + 1))
