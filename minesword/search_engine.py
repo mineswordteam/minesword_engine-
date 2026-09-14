@@ -6,6 +6,22 @@ from minesword.db import Database
 from minesword.normalizer import normalize_text, tokenize, expand_query_synonyms
 
 
+TOP_AUTHORITY_DOMAINS = {
+    "farsroid.com": 1.4,
+    "yasdl.com": 1.4,
+    "soft98.ir": 1.4,
+    "zoomg.ir": 1.3,
+    "zoomit.ir": 1.3,
+    "digikala.com": 1.3,
+    "torob.com": 1.3,
+    "varzesh3.com": 1.3,
+    "aparat.com": 1.25,
+    "p30download.ir": 1.25,
+    "sarzamindownload.com": 1.25,
+    "fa.wikipedia.org": 1.2
+}
+
+
 class SearchEngine:
     """Core search engine handling query parsing, FTS search, ranking, and autocomplete."""
 
@@ -20,10 +36,8 @@ class SearchEngine:
         - Domain filter: site:varzesh3.com
         """
         exact_phrases = re.findall(r'"([^"]+)"', query)
-        # Remove exact phrases from main query
         clean_q = re.sub(r'"[^"]+"', '', query)
 
-        # Domain filter site:domain.com
         site_filter = None
         site_match = re.search(r'\bsite:([a-zA-Z0-9.-]+)', clean_q)
         if site_match:
@@ -33,14 +47,11 @@ class SearchEngine:
         normalized_q = normalize_text(clean_q)
         tokens = tokenize(normalized_q)
 
-        # Normalize exact phrases
         norm_phrases = [normalize_text(p) for p in exact_phrases if p.strip()]
 
-        # Build SQLite FTS5 query string
         fts_terms = []
         for token in tokens:
             if token:
-                # Add prefix search to last token or all tokens for flexible matching
                 fts_terms.append(f'"{token}"*')
 
         for phrase in norm_phrases:
@@ -55,14 +66,14 @@ class SearchEngine:
         query_text: str,
         exact_phrases: List[str]
     ) -> List[Dict[str, Any]]:
-        """Calculate custom relevance score for each result.
+        """Calculate custom relevance score for each result using Google-like multi-signal scoring.
 
         Score components:
-        1. BM25 score from SQLite FTS5 (lower BM25 numerical score = higher relevance)
-        2. Exact query match boost in Title (up to 50% score boost)
-        3. Token match ratio in Title (boost)
-        4. Exact phrase presence in Title / Body (boost)
-        5. Domain brevity & quality bonus (.ir / national domain relevance)
+        1. BM25 base score from SQLite FTS5
+        2. Exact query match & prefix match in Title (up to 300% boost)
+        3. Token coverage ratio in Title and Description
+        4. Exact phrase presence in Title / Body
+        5. Domain authority & .ir local domain bonus
         """
         norm_query = normalize_text(query_text)
         query_tokens = tokenize(norm_query)
@@ -70,46 +81,54 @@ class SearchEngine:
         ranked = []
         for item in results:
             base_score = abs(item.get("score", 1.0))
-            # Start with base score multiplier (smaller score = better in FTS5 BM25, so we convert to a higher-is-better metric)
             relevance = 100.0 / (1.0 + base_score)
 
             norm_title = item.get("normalized_title", normalize_text(item.get("title", "")))
             norm_body = item.get("normalized_body", normalize_text(item.get("raw_body", "")))
+            norm_desc = item.get("normalized_description", normalize_text(item.get("description", "")))
+            domain = item.get("domain", "").lower()
 
             # Boost 1: Full query in title
             if norm_query and norm_query in norm_title:
-                relevance *= 2.5
+                relevance *= 3.0
+                if norm_title.startswith(norm_query):
+                    relevance *= 1.5
 
-            # Boost 2: Query token occurrences in title
+            # Boost 2: Query token occurrences in title and description
             if query_tokens:
                 matches_in_title = sum(1 for t in query_tokens if t in norm_title)
                 title_ratio = matches_in_title / float(len(query_tokens))
-                relevance *= (1.0 + title_ratio * 1.5)
+                relevance *= (1.0 + title_ratio * 2.0)
+
+                matches_in_desc = sum(1 for t in query_tokens if t in norm_desc)
+                desc_ratio = matches_in_desc / float(len(query_tokens))
+                relevance *= (1.0 + desc_ratio * 0.8)
 
             # Boost 3: Exact phrase match boost
             for phrase in exact_phrases:
                 if phrase in norm_title:
-                    relevance *= 2.0
+                    relevance *= 2.5
                 elif phrase in norm_body:
-                    relevance *= 1.3
+                    relevance *= 1.4
 
-            # Boost 4: Iranian domain boost (.ir / local domain)
-            domain = item.get("domain", "").lower()
-            if domain.endswith(".ir") or ".ir/" in domain:
-                relevance *= 1.2
+            # Boost 4: Domain authority bonus
+            for auth_domain, weight in TOP_AUTHORITY_DOMAINS.items():
+                if auth_domain in domain:
+                    relevance *= weight
+                    break
+            else:
+                if domain.endswith(".ir") or ".ir/" in domain:
+                    relevance *= 1.15
 
             item_copy = dict(item)
             item_copy["relevance"] = round(relevance, 2)
 
-            # Format snippet highlighting
             if not item_copy.get("snippet"):
-                # Generate fallback snippet
-                raw = item_copy.get("raw_body", "")
-                item_copy["snippet"] = (raw[:200] + "...") if len(raw) > 200 else raw
+                raw = item_copy.get("description") or item_copy.get("raw_body", "")
+                item_copy["snippet"] = (raw[:220] + "...") if len(raw) > 220 else raw
 
             ranked.append(item_copy)
 
-        # Sort descending by relevance
         ranked.sort(key=lambda x: x["relevance"], reverse=True)
         return ranked
 
@@ -117,7 +136,8 @@ class SearchEngine:
         self,
         query: str,
         page: int = 1,
-        page_size: int = 10
+        page_size: int = 10,
+        category: str = None
     ) -> Dict[str, Any]:
         """Execute full search pipeline: parse, expand synonyms, FTS query, filter, rank, and paginate."""
         query_clean = query.strip()
@@ -132,7 +152,6 @@ class SearchEngine:
 
         fts_query, exact_phrases, site_filter = self.parse_query(query_clean)
 
-        # Expand synonyms if exact search wasn't explicitly requested
         expanded_queries = expand_query_synonyms(query_clean) if not exact_phrases else {query_clean}
 
         raw_results_dict: Dict[int, Dict[str, Any]] = {}
@@ -144,18 +163,17 @@ class SearchEngine:
                 eq_fts = f'"{norm_q}"*' if norm_q else ""
 
             if eq_fts:
-                res = self.db.search_fts(eq_fts, limit=150, offset=0)
+                res = self.db.search_fts(eq_fts, limit=200, offset=0)
                 for r in res:
                     raw_results_dict[r["id"]] = r
 
         raw_results = list(raw_results_dict.values())
 
         if not raw_results and fts_query:
-            # Flexible term OR fallback if rigid AND search returned 0
             tokens = tokenize(normalize_text(query_clean))
             if len(tokens) > 1:
                 or_fts = " OR ".join([f'"{t}"*' for t in tokens if t])
-                raw_results = self.db.search_fts(or_fts, limit=100, offset=0)
+                raw_results = self.db.search_fts(or_fts, limit=150, offset=0)
 
         if not raw_results:
             return {
@@ -169,9 +187,19 @@ class SearchEngine:
 
         raw_results = list(raw_results)
 
-        # Apply site filter if requested
         if site_filter:
             raw_results = [r for r in raw_results if site_filter in r.get("domain", "").lower()]
+
+        # Filter category if specified
+        if category and category.strip() and category.strip() != "all":
+            cat_norm = normalize_text(category)
+            filtered = []
+            for r in raw_results:
+                text_to_check = normalize_text(r.get("title", "") + " " + r.get("description", "") + " " + r.get("raw_body", ""))
+                if cat_norm in text_to_check:
+                    filtered.append(r)
+            if filtered:
+                raw_results = filtered
 
         ranked_results = self.rank_results(raw_results, query_clean, exact_phrases)
 

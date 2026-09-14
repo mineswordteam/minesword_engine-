@@ -205,6 +205,30 @@
             background-color: var(--accent-hover);
         }
 
+        /* Category Tabs (Google Style) */
+        .category-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-item {
+            padding: 0.5rem 1rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-item:hover, .tab-item.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+        }
+
         /* Suggestions Dropdown */
         .suggestions-dropdown {
             position: absolute;
@@ -270,7 +294,6 @@
             color: var(--text-secondary);
             font-size: 0.95rem;
             padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
         }
 
         .result-card {
@@ -287,17 +310,34 @@
             transform: translateY(-2px);
         }
 
+        .result-domain-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .domain-favicon {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            background-color: var(--accent-color);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
         .result-domain {
             font-size: 0.85rem;
             color: var(--accent-color);
-            margin-bottom: 0.25rem;
             direction: ltr;
-            text-align: right;
-            display: block;
         }
 
         .result-title {
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
         }
@@ -315,13 +355,6 @@
             color: var(--text-secondary);
             font-size: 0.95rem;
             line-height: 1.6;
-        }
-
-        .result-snippet b {
-            color: var(--text-primary);
-            background-color: rgba(56, 189, 248, 0.2);
-            padding: 0 3px;
-            border-radius: 3px;
         }
 
         .pagination {
@@ -393,11 +426,11 @@
             display: inline-block;
             background-color: rgba(16, 185, 129, 0.15);
             color: #10b981;
-            padding: 0.2rem 0.6rem;
+            padding: 0.25rem 0.75rem;
             border-radius: 20px;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             font-weight: bold;
-            margin-top: 0.5rem;
+            margin-top: 0.75rem;
         }
     </style>
 </head>
@@ -417,11 +450,11 @@
         <!-- Home Section -->
         <div id="homeSection" class="hero-section">
             <h1 class="hero-title">Minesword Engine</h1>
-            <p class="hero-subtitle">موتور جستجوی فوق‌العاده قوی، سریع و جامع | سازگار با شبکه ملی اطلاعات ایران</p>
+            <p class="hero-subtitle">موتور جستجوی هوشمند، فوق‌العاده قوی و جامع | فعال در شبکه ملی اطلاعات ایران</p>
 
             <div class="search-box-wrapper">
                 <div class="search-input-group">
-                    <input type="text" id="mainSearchInput" class="search-input" placeholder="عبارت مورد نظر، کلمه یا آدرس سایت را جستجو کنید..." autocomplete="off">
+                    <input type="text" id="mainSearchInput" class="search-input" placeholder="عبارت مورد نظر، بازی، نرم‌افزار، لپ‌تاپ یا سایت را جستجو کنید..." autocomplete="off">
                     <button class="search-btn" onclick="triggerSearch()">
                         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </button>
@@ -431,14 +464,14 @@
 
             <div class="popular-chips">
                 <span style="color: var(--text-secondary); font-size: 0.85rem; margin-left: 0.5rem; align-self: center;">پیشنهادها:</span>
-                <div class="chip" onclick="quickSearch('لب تاپ')">💻 لب تاپ</div>
+                <div class="chip" onclick="quickSearch('دانلود بازی کالاف دیوتی از یاس دانلود')">🎮 کالاف دیوتی یاس دانلود</div>
+                <div class="chip" onclick="quickSearch('دانلود کالاف دیوتی موبایل فارسروید')">📱 کالاف دیوتی فارسروید</div>
                 <div class="chip" onclick="quickSearch('بازی جنگ های صلیبی')">⚔️ بازی جنگ های صلیبی</div>
-                <div class="chip" onclick="quickSearch('اینترنت ملی')">⚡ اینترنت ملی</div>
-                <div class="chip" onclick="quickSearch('برنامه‌نویسی پایتون')">🐍 برنامه‌نویسی پایتون</div>
-                <div class="chip" onclick="quickSearch('دانلود بازی')">🎮 دانلود بازی</div>
+                <div class="chip" onclick="quickSearch('راهنمای خرید لپ تاپ زومیت')">💻 راهنمای خرید لپ تاپ</div>
+                <div class="chip" onclick="quickSearch('شبکه ملی اطلاعات')">⚡ شبکه ملی اطلاعات</div>
             </div>
 
-            <div class="badge-intranet">⚡ فعال در شبکه ملی اینترنت ایران (ملی)</div>
+            <div class="badge-intranet">⚡ فعال و پاسخگو در اینترنت ملی ایران</div>
         </div>
 
         <!-- Results Section -->
@@ -452,9 +485,17 @@
                 </div>
             </div>
 
+            <!-- Category Tabs -->
+            <div class="category-tabs">
+                <div class="tab-item active" onclick="switchCategory('all', this)">🌐 همه</div>
+                <div class="tab-item" onclick="switchCategory('بازی', this)">🎮 بازی و برنامه</div>
+                <div class="tab-item" onclick="switchCategory('لپ', this)">💻 فناوری و لپ‌تاپ</div>
+                <div class="tab-item" onclick="switchCategory('اخبار', this)">📰 اخبار و ورزش</div>
+            </div>
+
             <div class="results-header">
                 <div id="resultsStats">نتایج جستجو</div>
-                <div id="statusStats">تعداد صفحات اندکس شده: 0</div>
+                <div id="statusStats">صفحات ایندکس شده: 223</div>
             </div>
 
             <div id="resultsList"></div>
@@ -467,7 +508,7 @@
         <div class="modal">
             <h3 class="modal-title">افزودن و اندکس‌سازی آدرس وب</h3>
             <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">آدرس وبسایت مورد نظر را جهت خزش و افزودن کامل به موتور جستجو وارد کنید:</p>
-            <input type="url" id="indexUrlInput" class="modal-input" placeholder="https://example.ir" required>
+            <input type="url" id="indexUrlInput" class="modal-input" placeholder="https://farsroid.com" required>
             <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
                 <label style="font-size: 0.85rem; color: var(--text-secondary)">عمق خزش:</label>
                 <select id="crawlDepth" style="padding: 0.4rem; border-radius: 6px; background: var(--bg-color); color: var(--text-primary); border: 1px solid var(--border-color);">
@@ -484,14 +525,14 @@
     </div>
 
     <footer>
-        <p>Minesword Engine &copy; ۲۰۲۵ | قدرتمندترین موتور جستجوی بومی و ملی با پشتیبانی کامل از تمام کلمات</p>
+        <p>Minesword Engine &copy; ۲۰۲۶ | موتور جستجوی هوشمند بومی با رتبه‌بندی دقیق گوگل و خزش وب‌سایت‌های ایرانی</p>
     </footer>
 
     <script>
         let currentQuery = '';
         let currentPage = 1;
+        let currentCategory = 'all';
 
-        // Theme management
         function toggleTheme() {
             const isLight = document.body.getAttribute('data-theme') === 'light';
             document.body.setAttribute('data-theme', isLight ? 'dark' : 'light');
@@ -510,7 +551,6 @@
             performSearch(query, 1);
         }
 
-        // Search trigger
         function triggerSearch() {
             const q = document.getElementById('mainSearchInput').value.trim();
             if (q) performSearch(q, 1);
@@ -521,7 +561,6 @@
             if (q) performSearch(q, 1);
         }
 
-        // Enter key listeners
         document.getElementById('mainSearchInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') triggerSearch();
         });
@@ -529,7 +568,13 @@
             if (e.key === 'Enter') triggerTopSearch();
         });
 
-        // Autocomplete setup
+        function switchCategory(cat, el) {
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            if(el) el.classList.add('active');
+            currentCategory = cat;
+            if(currentQuery) performSearch(currentQuery, 1);
+        }
+
         function setupAutocomplete(inputId) {
             const input = document.getElementById(inputId);
             const box = document.getElementById('suggestionsBox');
@@ -571,24 +616,31 @@
         async function performSearch(query, page = 1) {
             currentQuery = query;
             currentPage = page;
+            const startTime = performance.now();
             document.getElementById('homeSection').style.display = 'none';
             document.getElementById('resultsSection').style.display = 'block';
             document.getElementById('topSearchInput').value = query;
             document.getElementById('suggestionsBox').style.display = 'none';
 
-            document.getElementById('resultsList').innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-secondary);">در حال دریافت نتایج...</div>';
+            document.getElementById('resultsList').innerHTML = '<div style="text-align: center; padding: 3rem; color: var(--text-secondary);">در حال دریافت و رتبه‌بندی هوشمند نتایج...</div>';
 
             try {
-                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&page=${page}`);
+                let url = `/api/search?q=${encodeURIComponent(query)}&page=${page}`;
+                if(currentCategory && currentCategory !== 'all') {
+                    url += `&category=${encodeURIComponent(currentCategory)}`;
+                }
+                const res = await fetch(url);
                 const data = await res.json();
-                renderResults(data);
+                const endTime = performance.now();
+                const elapsedSeconds = ((endTime - startTime) / 1000).toFixed(2);
+                renderResults(data, elapsedSeconds);
             } catch (err) {
                 document.getElementById('resultsList').innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">خطا در دریافت نتایج جستجو! لطفاً مجدداً تلاش کنید.</div>';
             }
         }
 
-        function renderResults(data) {
-            document.getElementById('resultsStats').innerText = `حدود ${data.total} نتیجه یافت شد (${data.total_pages} صفحه)`;
+        function renderResults(data, seconds) {
+            document.getElementById('resultsStats').innerText = `حدود ${data.total} نتیجه (${seconds} ثانیه) - صفحه ${data.page} از ${data.total_pages}`;
 
             if (!data.results || data.results.length === 0) {
                 document.getElementById('resultsList').innerHTML = `
@@ -602,13 +654,19 @@
                 return;
             }
 
-            const html = data.results.map(item => `
+            const html = data.results.map(item => {
+                const initial = (item.domain || 'W').charAt(0).toUpperCase();
+                return `
                 <div class="result-card">
-                    <span class="result-domain">${item.domain}</span>
+                    <div class="result-domain-bar">
+                        <div class="domain-favicon">${initial}</div>
+                        <span class="result-domain">${item.domain}</span>
+                    </div>
                     <h3 class="result-title"><a href="${item.url}" target="_blank" rel="noopener">${item.title}</a></h3>
                     <div class="result-snippet">${item.snippet}</div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
             document.getElementById('resultsList').innerHTML = html;
 
@@ -624,7 +682,6 @@
             document.getElementById('pagination').innerHTML = pageHtml;
         }
 
-        // Modal actions
         function openIndexModal() {
             document.getElementById('indexModal').style.display = 'flex';
         }
@@ -664,7 +721,7 @@
             try {
                 const res = await fetch('/api/status');
                 const data = await res.json();
-                document.getElementById('statusStats').innerText = `تعداد صفحات اندکس شده: ${data.total_pages}`;
+                document.getElementById('statusStats').innerText = `صفحات ایندکس شده: ${data.total_pages}`;
             } catch(e) {}
         }
         fetchStatus();

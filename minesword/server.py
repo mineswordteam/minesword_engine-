@@ -69,6 +69,7 @@ class MineswordServer:
     def handle_search(self, environ: Dict[str, Any], start_response: Callable) -> list:
         query_params = urllib.parse.parse_qs(environ.get("QUERY_STRING", ""))
         q = query_params.get("q", [""])[0]
+        cat = query_params.get("category", ["all"])[0]
         try:
             page = int(query_params.get("page", ["1"])[0])
         except ValueError:
@@ -79,7 +80,7 @@ class MineswordServer:
         except ValueError:
             page_size = 10
 
-        res = self.search_engine.search(query=q, page=page, page_size=page_size)
+        res = self.search_engine.search(query=q, page=page, page_size=page_size, category=cat)
         return self.json_response(res, start_response)
 
     def handle_suggest(self, environ: Dict[str, Any], start_response: Callable) -> list:
@@ -112,7 +113,6 @@ class MineswordServer:
         if not url:
             return self.json_response({"error": "URL parameter required"}, start_response, status="400 Bad Request")
 
-        # Spawn background thread for crawling to prevent blocking HTTP server
         thread = threading.Thread(
             target=self.crawler.crawl_seed,
             kwargs={"seed_url": url, "max_pages": max_pages, "max_depth": depth},
